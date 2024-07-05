@@ -1,0 +1,545 @@
+
+import React from 'react'
+import Header from './Header'
+import { useSelector } from 'react-redux'
+import { gql, useQuery } from '@apollo/client';
+
+
+
+
+const APPOINTMENT_QUERY = gql`
+query Patient($patientId: Int!) {
+    patient(id: $patientId) {
+      p_name
+      appointments
+      
+    }
+  }`
+
+const Appointments = () => {
+
+
+    const user= useSelector((store)=>store.user.user);
+    // const appointments=user.appointments
+
+
+    const { loading, error, data } = useQuery(APPOINTMENT_QUERY, {
+        variables: { patientId: parseInt(user.p_id) },
+      });
+    
+      if (loading) return <p>Loading...</p>;
+      if (error) return <p>Error: {error.message}</p>;
+    
+      const appointments = data?.patient?.appointments || [];
+    // const { loading, error, data } = useQuery(appointmentquery, {
+    //     variables: { poctorId: parseInt(user.p_id) },
+    //   });
+    
+      console.log("datais",data);
+// const appointments= data.Appointments
+
+
+  return (
+    <div>
+      <Header/>
+      {user&&<div className="bg-white rounded-lg shadow-md p-4">
+      <h2 className="text-2xl font-semibold mb-4 ">{user.p_name}'s Appointments</h2>
+      {appointments.length === 0 ? (
+        <p>No appointments found</p>
+      ) : (
+        <div>
+          {appointments.map((appointment, index) => {
+            const {
+              dp_id,
+              slot,
+              c_name,
+              c_address,
+              d_name,
+              d_mob,
+              d_fee,
+              d_exp,
+              d_img
+            } = JSON.parse(appointment);
+
+            return (
+              <div key={index} className="mb-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold">{c_name}</h3>
+                    <p className="text-gray-600">{c_address}</p>
+                    <p>Slot: {slot}</p>
+                  </div>
+                  <div>
+                    <img src={d_img} alt={d_name} className="w-16 h-16 object-cover rounded-full" />
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <p className="text-gray-600">Doctor: {d_name}</p>
+                  <p className="text-gray-600">Mobile: {d_mob}</p>
+                  <p className="text-gray-600">Fee: Rs. {d_fee}</p>
+                  <p className="text-gray-600">Experience: {d_exp} years</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>}
+      
+    </div>
+  )
+}
+
+export default Appointments
+
+
+resolvers.js
+const resolvers = {
+  Query: {
+    //working correct
+    doctors: async (_, __, { pool }) => {
+      const [rows] = await pool.query("SELECT * FROM Doctor");
+      console.log("ROWS", rows);
+      return rows.map((row) => ({
+        id: row.d_id,
+        name: row.d_name,
+        fee: row.d_fee,
+        experience: row.d_experience,
+        profile_img: row.profile_img,
+      }));
+    },
+    doctorById: async (_, { id }, { pool }) => {
+      const [rows] = await pool.query(`SELECT * FROM Doctor WHERE d_id=?;`, [
+        id,
+      ]);
+      // console.log(rows[0]);
+      return {
+        id: rows[0].d_id,
+        name: rows[0].d_name,
+        fee: rows[0].d_fee,
+        experience: rows[0].d_experience,
+        profile_img: rows[0].profile_img,
+      };
+    },
+    doctorByName: async (_, { name }, { pool }) => {
+      const [rows] = await pool.query(
+        `SELECT * FROM Doctor
+                                       WHERE
+        CASE
+            WHEN LENGTH(TRIM(?)) <3 THEN 0
+            ELSE d_name LIKE ?
+        END;`,
+        [name, `%${name}%`]
+      );
+      console.log("Rows", rows);
+      return rows.map((row) => ({
+        id: row.d_id,
+        name: row.d_name,
+        fee: row.d_fee,
+        experience: row.d_experience,
+        profile_img: row.profile_img,
+      }));
+    },
+    doctorBySpecialities: async (
+      _,
+      { speciality, limit, offset },
+      { pool }
+    ) => {
+      const [rows] = await pool.query(
+        `SELECT d.d_id,d.d_name,d.d_fee,d.d_experience,d.profile_img,s.spec_name
+                                         FROM doctors d
+                                         JOIN doctor_specialization_map ds ON d.d_id = ds.d_id
+                                         JOIN specializations s ON ds.s_id = s.s_id
+                                         WHERE s.s_name LIKE ?
+                                         ;`,
+        [`%${speciality}%`]
+      );
+      console.log("Rows", rows);
+      return rows.map((row) => ({
+        id: row.d_id,
+        name: row.d_name,
+        fee: row.d_fee,
+        experience: row.d_experience,
+        profile_img: row.profile_img,
+        specialization: row.spec_name,
+      }));
+    },
+    specialities: async (_, { name }, { pool }) => {
+      const [rows] = await pool.query(
+        `SELECT * FROM Specialization WHERE
+        CASE
+            WHEN LENGTH(TRIM(?)) <3 THEN 0
+            ELSE spec_name LIKE ?
+        END;`,
+        [name, `%${name}%`]
+      );
+      console.log("Rows", rows);
+      return rows.map((row) => ({
+        id: row.spec_id,
+        name: row.spec_name,
+      }));
+    },
+    clinicsByDocId: async (_, { id }, { pool }) => {
+      const [rows] = await pool.query(
+        `SELECT c.c_id, c.ClinicName, c.Address, c.City FROM Clinic c
+          JOIN doc_clin_mapping dc ON c.c_id =  dc.clinic_id
+          WHERE dc.doct_id = ?`,
+        [id]
+      );
+      console.log(rows);
+      return rows.map((row) => ({
+        id: row.c_id,
+        name: row.ClinicName,
+        address: row.Address,
+        city: row.City,
+      }));
+    },
+    specialityByDocId: async (_, { id }, { pool }) => {
+      const [rows] = await pool.query(
+        `SELECT s.spec_id, s.spec_name FROM Specialization s
+          JOIN Spec_Doct_mapping ds ON s.spec_id =  ds.s_id
+          WHERE ds.d_id = ?`,
+        [id]
+      );
+      console.log(rows);
+      return rows.map((row) => ({
+        id: row.spec_id,
+        name: row.spec_name,
+      }));
+    },
+  },
+};
+export default resolvers;
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useHistory from react-router-dom
+import doctors from './dummydata/doctors'; 
+import gql from 'graphql-tag';
+import { useQuery } from '@apollo/client';
+// import DOCTORS_QUERY from './graphql/doctorsQuery';
+
+const DOCTORS_QUERY = gql`
+  query Doctor($doctorId: Int!) {
+    doctor(id: $doctorId) {
+      d_id
+      d_name
+      d_mob
+      d_fee
+      d_exp
+      d_img
+      clinicmap {
+        c_id
+        c_name
+        c_address
+      }
+      specializations {
+        s_id
+        s_name
+      }
+    }
+  }
+`;
+
+const SearchBar = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [nameResults, setNameResults] = useState([]);
+  const [specializationResults, setSpecializationResults] = useState([]);
+  const [nameResultsHeight, setNameResultsHeight] = useState('h-20');
+  const [specializationResultsHeight, setSpecializationResultsHeight] = useState('h-20');
+  const Navigate = useNavigate(); // Initialize useHistory
+
+
+//   const { loading: doctorsLoading, error: doctorsError, data: doctorsData } = useQuery(DOCTORS_QUERY, {
+//     variables: { searchTerm },
+//     skip: searchTerm.trim() === ''
+//   });
+
+const { loading, error, data } = useQuery(DOCTORS_QUERY, {
+    variables: { doctorId: parseInt(searchTerm) } ,
+    skip: searchTerm.trim() === '', // Skip query if searchTerm is empty
+        fetchPolicy: 'network-only'
+  });
+
+  console.log(data);
+
+const debounce =(func) =>{
+    let timer;
+    return function(...args){
+        const context=this;
+        if(timer) clearTimeout(timer)
+            timer= setTimeout(()=>{
+        timer=null
+        func.apply(context,args)
+            },500)
+    }
+}
+//   const debounce = (func, delay) => {
+//     let timer;
+//     return function (...args) {
+//       const context = this;
+//       if (timer) clearTimeout(timer);
+//       timer = setTimeout(() => {
+//         timer = null;
+//         func.apply(context, args);
+//       }, delay);
+//     };
+//   };
+
+  const optimisedVersion = useCallback(
+    debounce((value) => {
+      if (value.trim() !== '') {
+        // Filter by name
+        const filteredByName = doctors.filter(
+          (doctor) =>
+            doctor.name.toLowerCase().includes(value.toLowerCase())
+        );
+        setNameResults(filteredByName);
+        setNameResultsHeight(filteredByName.length > 0 ? 'h-80' : 'h-20');
+
+        // Filter by specialization
+        const filteredBySpecialization = doctors.filter(
+          (doctor) =>
+            doctor.specialization.toLowerCase().includes(value.toLowerCase())
+        );
+        setSpecializationResults(filteredBySpecialization);
+        setSpecializationResultsHeight(filteredBySpecialization.length > 0 ? 'h-80' : 'h-20');
+      } else {
+        setNameResults([]);
+        setSpecializationResults([]);
+        setNameResultsHeight('h-20');
+        setSpecializationResultsHeight('h-20');
+      }
+    }, 9000),
+    []
+  );
+
+//   useEffect(() => {
+//     optimisedVersion(searchTerm);
+//   }, [searchTerm, optimisedVersion]);
+
+  const handleSearchChange = (event) => {
+    const { value } = event.target;
+    setSearchTerm(value);
+  };
+
+  // Navigate to doctor profile component
+  const goToDoctorProfile = (doctorId) => {
+    Navigate(`/doctor/${doctorId}`);
+  };
+
+  // Navigate to specialization component
+  const goToSpecializationDoctors = (specializationName) => {
+    Navigate(`/specialization/${specializationName}`);
+  };
+
+  return (
+    <div className="container mx-auto py-8">
+      <div className="mt-2 place-content-center flex items-center">
+        <input
+          type="text"
+          placeholder="Search doctors by name, specialization, or address"
+          className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-blue-500"
+          value={searchTerm}
+          onChange={handleSearchChange}
+        />
+      </div>
+      <div className={`mt-4 overflow-y-auto ${nameResultsHeight}`}>
+        {nameResults.length > 0 && (
+          <>
+            <h2 className="text-xl font-semibold mt-4">Search Results by Name</h2>
+            <ul className="divide-y divide-gray-200">
+              {nameResults.map((doctor) => (
+                <li key={doctor.doctor_id} className="py-4 cursor-pointer" onClick={() => goToDoctorProfile(doctor.doctor_id)}>
+                  <div className="place-content-center text-center">
+                    <h2 className="text-xl font-semibold">{doctor.name}</h2>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {nameResults.length === 0 && searchTerm.trim() !== '' && (
+          <p className="text-gray-600 mt-4 text-center">No results found by name</p>
+        )}
+      </div>
+      
+      <div className={`mt-4 overflow-y-auto ${specializationResultsHeight}`}>
+        {specializationResults.length > 0 && (
+          <>
+            <h2 className="text-xl font-semibold mt-4 ">Search Results by Specialization</h2>
+            <ul className="divide-y divide-gray-200">
+              {specializationResults.map((doctor) => (
+                <li key={doctor.doctor_id} className="py-4 cursor-pointer" onClick={() => goToSpecializationDoctors(doctor.specialization)}>
+                  <div className="place-content-center text-center">
+                    <h2 className="text-xl font-semibold">{doctor.specialization}</h2>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {specializationResults.length === 0 && searchTerm.trim() !== '' && (
+          <p className="text-gray-600 mt-4 text-center">No results found by specialization</p>
+        )}
+      </div>
+
+      <div className="mt-4 place-content-center text-gray-500 flex items-center">
+        <span className="mr-2">Fed up of endless wait?</span>
+        <a href="https://google.com" className="text-purple-600 flex items-center">
+          Look for a clinic with <span className="ml-1 font-bold">Prime</span>
+          <svg
+            className="h-6 w-6 text-purple-600 ml-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  );
+};
+
+export default SearchBar;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import React, { useState, useEffect, useCallback } from 'react';
+// import { useNavigate } from 'react-router-dom';
+// import gql from 'graphql-tag';
+// import { useQuery } from '@apollo/client';
+
+// const DOCTORS_QUERY = gql`
+//   query Doctor($doctorId: Int!) {
+//     doctor(id: $doctorId) {
+//       d_id
+//       d_name
+//       d_mob
+//       d_fee
+//       d_exp
+//       d_img
+//       clinicmap {
+//         c_id
+//         c_name
+//         c_address
+//       }
+//       specializations {
+//         s_id
+//         s_name
+//       }
+//     }
+//   }
+// `;
+
+// const SearchBar = () => {
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const [nameResults, setNameResults] = useState([]);
+//   const [specializationResults, setSpecializationResults] = useState([]);
+//   const [nameResultsHeight, setNameResultsHeight] = useState('h-20');
+//   const [specializationResultsHeight, setSpecializationResultsHeight] = useState('h-20');
+//   const Navigate = useNavigate();
+
+//   const { loading, error, data, refetch } = useQuery(DOCTORS_QUERY, {
+//     variables: { doctorId: parseInt(searchTerm) },
+//     skip: searchTerm.trim() === '', // Skip query if searchTerm is empty
+//     fetchPolicy: 'network-only' // Ensure network request for each refetch
+//   });
+
+//   useEffect(() => {
+//     if (data && data.doctor) {
+//         console.log(data.doctor);
+//       // Handle search results when data is fetched
+//       // Example: Update nameResults and specializationResults state
+//       // Replace with your logic based on actual GraphQL response structure
+//     }
+//   }, [data]);
+
+//   const debounce = useCallback((func, delay) => {
+//     let timer;
+//     return function (...args) {
+//       const context = this;
+//       if (timer) clearTimeout(timer);
+//       timer = setTimeout(() => {
+//         timer = null;
+//         func.apply(context, args);
+//       }, delay);
+//     };
+//   }, []);
+
+//   const optimisedVersion = useCallback(
+//     debounce((value) => {
+//       refetch({ doctorId: parseInt(value) }); // Trigger GraphQL query on debounce
+//     }, 500),
+//     [debounce, refetch]
+//   );
+
+//   const handleSearchChange = (event) => {
+//     const { value } = event.target;
+//     setSearchTerm(value);
+//   };
+
+//   // Navigate to doctor profile component
+//   const goToDoctorProfile = (doctorId) => {
+//     Navigate(`/doctor/${doctorId}`);
+//   };
+
+//   // Navigate to specialization component
+//   const goToSpecializationDoctors = (specializationName) => {
+//     Navigate(`/specialization/${specializationName}`);
+//   };
+
+//   return (
+//     <div className="container mx-auto py-8">
+//       <div className="mt-2 place-content-center flex items-center">
+//         <input
+//           type="text"
+//           placeholder="Search doctors by name, specialization, or address"
+//           className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-blue-500"
+//           value={searchTerm}
+//           onChange={handleSearchChange}
+//         />
+//       </div>
+//       <div className={`mt-4 overflow-y-auto ${nameResultsHeight}`}>
+//         {/* Display search results by name */}
+//         {/* Modify this section based on your actual data handling */}
+//       </div>
+//       <div className={`mt-4 overflow-y-auto ${specializationResultsHeight}`}>
+//         {/* Display search results by specialization */}
+//         {/* Modify this section based on your actual data handling */}
+//       </div>
+//       <div className="mt-4 place-content-center text-gray-500 flex items-center">
+//         <span className="mr-2">Fed up of endless wait?</span>
+//         <a href="https://google.com" className="text-purple-600 flex items-center">
+//           Look for a clinic with <span className="ml-1 font-bold">Prime</span>
+//           <svg
+//             className="h-6 w-6 text-purple-600 ml-1"
+//             fill="none"
+//             stroke="currentColor"
+//             viewBox="0 0 24 24"
+//             xmlns="http://www.w3.org/2000/svg"
+//           >
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+//           </svg>
+//         </a>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default SearchBar;

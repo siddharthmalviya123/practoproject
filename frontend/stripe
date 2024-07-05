@@ -1,0 +1,147 @@
+import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery, gql, useMutation } from '@apollo/client';
+import Header from './Header';
+import { useSelector } from 'react-redux';
+
+const SLOTS_QUERY = gql`
+  query Query($doctorId: Int!, $patientId: Int!) {
+    availableSlots(doctorId: $doctorId, patientId: $patientId)
+  }
+`;
+
+const CREATE_STRIPE_CHECKOUT_SESSION = gql`
+mutation CreateStripeCheckoutSession($dId: Int!, $dName: String!, $dFee: Float!, $pId: Int!, $cId: Int!, $slot: Int!) {
+  createStripeCheckoutSession(d_id: $dId, d_name: $dName, d_fee: $dFee, p_id: $pId, c_id: $cId, slot: $slot)
+}
+`;
+
+const Slotspage = () => {
+  const { d_id, c_id } = useParams();
+  const s_doctor = useSelector((store) => store.store_doctor);
+  const s_clinic = useSelector((store) => store.store_clinic);
+  const user = useSelector((store) => store.user.user);
+  const doctorId = parseInt(d_id); 
+  const patientId = parseInt(c_id); 
+  const Navigate = useNavigate();
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [showPaymentSummary, setShowPaymentSummary] = useState(false);
+  const { loading, error, data } = useQuery(SLOTS_QUERY, {
+    variables: { doctorId, patientId },
+  });
+
+
+  
+  console.log("selected slot is",selectedSlot, typeof(selectedSlot))
+  
+  const [createCheckoutSession] = useMutation(CREATE_STRIPE_CHECKOUT_SESSION);
+
+console.log("doctor name ",s_doctor.store_doctor.d_name)
+console.log("doctor id ",s_doctor.store_doctor.d_id,typeof(s_doctor.store_doctor.d_id))
+console.log("doctor fee",s_doctor.store_doctor.d_fee,typeof(parseFloat(s_doctor.store_doctor.d_fee)))
+
+console.log("user id ",user.p_id,typeof(user.p_id))
+
+console.log("doctor name ",s_doctor.store_doctor.d_id,typeof(s_doctor.store_doctor.d_id))
+console.log("clinic id ",s_clinic.store_clinic.c_id,typeof(s_clinic.store_clinic.c_id))
+
+
+
+
+  const handleSlotClick = (slot) => {
+    setSelectedSlot(slot);
+    setShowPaymentSummary(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    try {
+        const { data } = await createCheckoutSession({
+            variables: {
+              dId: s_doctor.store_doctor.d_id,
+              dName: s_doctor.store_doctor.d_name,
+              dFee: parseFloat(s_doctor.store_doctor.d_fee),
+              d_img: s_doctor.store_doctor.d_img,
+              pId: user.p_id,
+              cId: s_clinic.store_clinic.c_id,
+              slot: parseInt(selectedSlot), // Ensure you pass selectedSlot here
+            },
+          });
+
+          console.log('Checkout session created:', data);
+  
+        // Redirect to Stripe checkout page
+        const stripe = await window.Stripe('sk_test_51PYuoAIrl7PBMThrvLTess9CJR9WyfD9Kxe2rUQi8lhfvOFCMe9ehTMgMUrVZZS4WdMko6nBGSl5ahrbz7OAQJ6q00fQODgMkN');
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: data.createStripeCheckoutSession,
+        });
+  
+        if (error) {
+          console.error('Error redirecting to checkout:', error);
+        }
+      } catch (error) {
+        console.error('Error creating checkout session:', error);
+      }
+  };
+
+  return (
+    <div>
+      <Header />
+      <div className="max-w-md mx-auto mt-9 bg-white p-4 rounded-md shadow-md">
+        <h1 className="text-2xl font-semibold mb-4">Pick a time slot</h1>
+        <div className="border-b mb-4">
+          <h2 className="text-lg font-semibold">{s_clinic.store_clinic.c_name}</h2>
+          <p>{s_clinic.store_clinic.c_address}</p>
+          <p className="text-blue-600">Rs. {s_doctor.store_doctor.d_fee}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {loading ? (
+            <p>Loading slots...</p>
+          ) : error ? (
+            <p>Error loading slots</p>
+          ) : data && data.availableSlots.length > 0 ? (
+            data.availableSlots.map((slot) => (
+              <button
+                key={slot}
+                className={`text-blue-600 border p-2 rounded-md hover:bg-blue-100 focus:outline-none ${
+                  selectedSlot === slot? 'bg-blue-100' : ''
+                }`}
+                onClick={() => handleSlotClick(slot)}
+              >
+                {slot}
+              </button>
+            ))
+          ) : (
+            <p>No slots available</p>
+          )}
+        </div>
+
+        {showPaymentSummary && (
+          <div className="mt-4 bg-gray-100 p-4 rounded-md">
+            <h2 className="text-lg font-semibold mb-2">Payment Summary</h2>
+            <p>
+              <span className="font-semibold">Doctor:</span> {s_doctor.store_doctor.d_name}
+            </p>
+            <p>
+              <span className="font-semibold">Clinic:</span> {s_clinic.store_clinic.c_name}
+            </p>
+            <p>
+              <span className="font-semibold">Address:</span> {s_clinic.store_clinic.c_address}
+            </p>
+            <p>
+              <span className="font-semibold">Selected Slot:</span> {selectedSlot}
+            </p>
+            <button
+              onClick={handleConfirmPayment}
+              className="mt-4 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+            >
+              Confirm Payment
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Slotspage;
