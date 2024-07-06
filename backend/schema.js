@@ -15,6 +15,8 @@ type Query {
   doctorSpecializationMaps: [DoctorSpecializationMap]
   doctorBySpecialities(speciality: String!, limit: Int, offset: Int) :[Doctor]
   availableSlots(doctorId: Int!, patientId:Int!): [String]
+  doctorByName(name:String!):[Doctor]
+  specialities(name:String!):[Specialization]
 }
 
 
@@ -32,6 +34,9 @@ type Mutation {
   createOrder(amount: Int): Order
   verifyPayment(razorpay_order_id: String!, razorpay_payment_id: String!, razorpay_signature: String!): PaymentVerificationResponse
     addAppointment(doc_id:ID!,pat_id:ID!,clinic_id:ID!,start_time:Int!): Appointment
+    doctorByNamePage(name:String!, limit:Int!, offset:Int!):[Doctor]
+    doctorBySpecialitiesPage(name:String!, limit:Int!, offset:Int!):[Doctor]
+
 }
 
 

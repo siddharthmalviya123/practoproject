@@ -1,6 +1,4 @@
 import React from 'react';
-// import { IoIosArrowDropdown } from "react-icons/io";
-// import SearchBar from './Search';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '../redux/userSlice';
@@ -50,8 +48,11 @@ const Header = () => {
                     </div>
                 ) : (
                     <div>
-                        <button onClick={()=>Navigate('/login')} className='border border-slate-600 rounded-lg text-slate-600 px-4 py-2 hover:border-blue-900 hover:text-blue-900 '>
+                        <button onClick={()=>Navigate('/login')} className='border border-slate-600 mx-2 rounded-lg text-slate-600 px-4 py-2 hover:border-blue-900 hover:text-blue-900 '>
                             Login/signin
+                        </button>
+                        <button onClick={()=>Navigate('/')} className='border border-slate-600 rounded-lg text-slate-600 px-4 py-2 hover:border-blue-900 hover:text-blue-900 '>
+                            Home Page
                         </button>
                     </div>
                 )}

@@ -4,11 +4,10 @@ import jwt from "jsonwebtoken";
 import Stripe from "stripe";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import dotenv from "dotenv"
 
+dotenv.config();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2020-08-27', // Ensure to use the latest Stripe API version
-});
 
 const resolvers = {
     Query: {
@@ -160,22 +159,87 @@ const resolvers = {
                 )
 
               `, [doctorId, patientId]);
-
-                //   console.log("result",slotsQuery)
-                // Extract slots from the query result rows and map them to strings
                 const availableSlots = slotsQuery.map(row => row.time);
-                //   console.log(availableSlots);
-
                 return availableSlots;
             } catch (error) {
                 console.error('Error fetching available slots:', error);
                 throw error; // Throw the error to handle it at the GraphQL layer
             }
-        }
-
+        },
+        doctorByName: async (_, { name }, { pool }) => {
+            const [rows] = await pool.query(
+              `SELECT * FROM Doctors
+                                             WHERE
+              CASE
+                  WHEN LENGTH(TRIM(?)) <3 THEN 0
+                  ELSE d_name LIKE ?
+              END;`,
+              [name, `%${name}%`]
+            );
+            console.log("Rows", rows);
+            return rows.map((row) => ({
+              d_id: row.d_id,
+              d_name: row.d_name,
+              d_fee: row.d_fee,
+              d_exp: row.d_exp,
+              d_img: row.d_img,
+              d_mob:row.d_mob
+            }));
+          },
+          specialities: async (_, { name }, { pool }) => {
+            const [rows] = await pool.query(
+              `SELECT * FROM specializations WHERE
+              CASE
+                  WHEN LENGTH(TRIM(?)) <3 THEN 0
+                  ELSE s_name LIKE ?
+              END;`,
+              [name, `%${name}%`]
+            );
+            console.log("Rows", rows);
+            return rows.map((row) => ({
+              s_id: row.s_id,
+              s_name: row.s_name,
+            }));
+          },
 
     },
+
     Mutation: {
+        doctorBySpecialitiesPage: async (_, { name ,limit,offset}, { pool }) => {
+            const [rows] = await pool.query(
+                `SELECT d.d_id,d.d_name,d.d_fee,d.d_exp,d.d_img, d.d_mob
+                                               FROM doctors d
+                                               JOIN doctor_specialization_map ds ON d.d_id = ds.d_id
+                                               JOIN specializations s ON ds.s_id = s.s_id
+                                               WHERE s.s_name LIKE ?
+                                               LIMIT ? OFFSET ?
+                                               ;`,
+                [name,limit,offset]
+            );
+            // console.log("Rows", rows);
+            return rows;
+        },
+          doctorByNamePage: async (_, { name ,limit,offset}, { pool }) => {
+            const [rows] = await pool.query(
+              `SELECT * FROM Doctors
+                                             WHERE
+              CASE
+                  WHEN LENGTH(TRIM(?)) <3 THEN 0
+                  ELSE d_name LIKE ?
+              END;
+              `,
+              [name, `%${name}%`]
+            );
+            console.log("Rows", rows);
+            return rows.map((row) => ({
+              d_id: row.d_id,
+              d_name: row.d_name,
+              d_fee: row.d_fee,
+              d_exp: row.d_exp,
+              d_img: row.d_img,
+              d_mob:row.d_mob
+            }));
+          },
         createOrder: async (_, { amount }, { pool }) => {
             var options = {
               amount: amount * 100,
@@ -185,8 +249,8 @@ const resolvers = {
       
             try {
               const instance = new Razorpay({
-                key_id: "rzp_test_tcw7K00n3n9dSW",
-                key_secret: "bE1S2UzGKWtlBoRT1HbMsp80",
+                key_id: process.env.KEY_ID,
+                key_secret: process.env.KEY_SECRET,
               });
       
               const paymentResponse = await instance.orders.create(options);
@@ -209,7 +273,7 @@ const resolvers = {
           ) => {
             const body = razorpay_order_id + "|" + razorpay_payment_id;
             const expectedSignature = crypto
-              .createHmac("sha256", "bE1S2UzGKWtlBoRT1HbMsp80")
+              .createHmac("sha256", process.env.KEY_SECRET)
               .update(body.toString())
               .digest("hex");
       
@@ -220,47 +284,7 @@ const resolvers = {
       
             return { success: false, message: "Payment Failed" };
           },
-        createStripeCheckoutSession: async (_, { d_id, d_name, d_fee, d_img, p_id, c_id, slot }) => {
-            try {
-                const session = await stripe.checkout.sessions.create({
-                    payment_method_types: ['card'],
-                    mode: 'payment',
-                    success_url: 'http://localhost:3000/appointments',
-                    cancel_url: 'http://localhost:3000/',
-                    customer_email: '', // Provide customer's email here
-                    client_reference_id: d_id.toString(), // Convert to string
-                    line_items: [
-                        {
-                            price_data: {
-                                currency: 'usd',
-                                unit_amount: d_fee * 100, // Amount in cents
-                                product_data: {
-                                    name: d_name,
-                                    description: 'Your appointment is booked',
-                                    images: [d_img],
-                                },
-                            },
-                            quantity: 1,
-                        },
-                    ],
-                });
-
-                // Save session ID or any relevant details to database (doctor_patient_map in your case)
-                const query = `
-                INSERT INTO doctor_patient_map (d_id, p_id, c_id, slot)
-                VALUES ($1, $2, $3, $4)
-              `;
-                const values = [d_id, p_id, c_id, slot];
-                await pool.query(query, values);
-
-                return session.id;
-            } 
-            catch (err) 
-            {
-                console.error('Error creating checkout session:', err.message);
-                throw new Error(err.message);
-            }
-        },
+    
     addDoctor: async (_, { input }, { pool }) => {
         const { d_name, d_mob, d_fee, d_exp, d_img } = input;
         const query = 'INSERT INTO doctors (d_name, d_mob, d_fee, d_exp, d_img) VALUES (?, ?, ?, ?, ?)';
@@ -401,14 +425,6 @@ const resolvers = {
         { doc_id, pat_id, clinic_id, start_time },
         { pool }
       ) => {
-        // const [existingAppointment] = await pool.query(
-        //   `SELECT * FROM doc_pat_mapping WHERE doc_id=? AND clinic_id=? AND slot_start_time=?`,
-        //   [doc_id, clinic_id, start_time]
-        // );
-        // if (existingAppointment.length > 0) {
-        //   throw new Error("Slot is already booked by other patient");
-        // }
-  
         const [addedAppointment] = await pool.query(
           `INSERT INTO doctor_patient_map (d_id,p_id,c_id, slot) VALUES (?, ?, ?,?);`,
           [doc_id, pat_id, clinic_id, start_time]

@@ -5,19 +5,20 @@ import { typeDefs } from './schema.js';
 import resolvers from './resolvers.js'; 
 import mysql from 'mysql2/promise'; // Using promise-based MySQL client
 import cors from 'cors';
+import dotenv from 'dotenv';
 
 const app = express();
-
+dotenv.config()
 // CORS configuration to allow all origins
 app.use(cors());
 
 const startServer = async () => {
   try {
     const pool = mysql.createPool({
-      host: 'localhost',
+      host: process.env.HOST,
       user: 'web_app',
-      password: 'test123',
-      database: 'web_app',
+      password: process.env.PASSWORD,
+      database: process.env.DATABASE,
      
     });
   
@@ -35,7 +36,7 @@ const startServer = async () => {
 
 
     app.listen({ port: 4000 }, () =>
-      console.log(`Server ready at http://localhost:4000${server.graphqlPath}`)
+      console.log(`Server ready at ${process.env.PORT}${server.graphqlPath}`)
     );
   } catch (err) {
     console.error('Unable to connect to the database:', err.message);

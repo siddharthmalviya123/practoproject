@@ -3,24 +3,21 @@ import Header from './Header'
 import { useSelector } from 'react-redux'
 import { gql, useQuery } from '@apollo/client';
 
+import { APPOINTMENT_QUERY } from '../graphql/doctorsQuery';
 
-
-
-const APPOINTMENT_QUERY = gql`
-query Patient($patientId: Int!) {
-    patient(id: $patientId) {
-      p_name
-      appointments
+// const APPOINTMENT_QUERY = gql`
+// query Patient($patientId: Int!) {
+//     patient(id: $patientId) {
+//       p_name
+//       appointments
       
-    }
-  }`
+//     }
+//   }`
 
 const Appointments = () => {
 
 
     const user= useSelector((store)=>store.user.user);
-    // const appointments=user.appointments
-
 
     const { loading, error, data } = useQuery(APPOINTMENT_QUERY, {
         variables: { patientId: parseInt(user.p_id) },
@@ -30,13 +27,6 @@ const Appointments = () => {
       if (error) return <p>Error: {error.message}</p>;
     
       const appointments = data?.patient?.appointments || [];
-    // const { loading, error, data } = useQuery(appointmentquery, {
-    //     variables: { poctorId: parseInt(user.p_id) },
-    //   });
-    
-      console.log("datais",data);
-// const appointments= data.Appointments
-
 
   return (
     <div>
