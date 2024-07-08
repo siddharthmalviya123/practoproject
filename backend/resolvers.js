@@ -219,6 +219,26 @@ const resolvers = {
             // console.log("Rows", rows);
             return rows;
         },
+        cancelappointments: async (_, { appointmentid }, { pool }) => {
+            try {
+                const [result] = await pool.query(
+                    'DELETE FROM doctor_patient_map WHERE dp_id = ?',
+                    [appointmentid]
+                );
+        
+                console.log("Delete result:", result);
+        
+                if (result.affectedRows > 0) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error cancelling appointment:', error);
+                return false;
+            }
+        },
+        
           doctorByNamePage: async (_, { name ,limit,offset}, { pool }) => {
             const [rows] = await pool.query(
               `SELECT * FROM Doctors

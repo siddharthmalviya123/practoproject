@@ -20,11 +20,11 @@ const Body = () => {
             element: <Login/>
         },
         {
-            path: "/browse/doctor/:id",
+            path: "/browse/doctor/:id/:cityname",
             element: <Doctorprofile/>
         },
         {
-            path: "/browse/specialization/:s_name",
+            path: "/browse/specialization/:s_name/:cityname",
             element: <Searchpage/>
         },
         {

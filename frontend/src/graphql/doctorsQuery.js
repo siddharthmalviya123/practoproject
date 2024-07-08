@@ -129,3 +129,8 @@ export const searchBySpecialityPage= gql`mutation DoctorBySpecialitiesPage($name
      
     }
   }`;
+  export const CANCEL_APPOINTMENT_MUTATION = gql`
+ mutation Cancelappointments($appointmentid: Int!) {
+  cancelappointments(appointmentid: $appointmentid)
+}
+`;

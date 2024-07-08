@@ -8,7 +8,7 @@ import ClinicInfo from './ClinicInfo';
 
 const Doctorprofile = () => {
 
-  const { id } = useParams();
+  const { id ,cityname} = useParams();
 
   const DOCTOR_QUERY = gql`
     query Doctor($doctorId: Int!) {

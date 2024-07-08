@@ -36,6 +36,7 @@ type Mutation {
     addAppointment(doc_id:ID!,pat_id:ID!,clinic_id:ID!,start_time:Int!): Appointment
     doctorByNamePage(name:String!, limit:Int!, offset:Int!):[Doctor]
     doctorBySpecialitiesPage(name:String!, limit:Int!, offset:Int!):[Doctor]
+    cancelappointments(appointmentid:Int!) : Boolean!
 
 }
 

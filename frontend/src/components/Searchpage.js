@@ -8,8 +8,9 @@ import { specializationQuery ,searchBySpecialityPage} from '../graphql/doctorsQu
 import InfiniteScroll from 'react-infinite-scroll-component';
 
 const Searchpage = () => {
-    const { s_name } = useParams();
-    const { loading, error, data } = useQuery(specializationQuery, { variables: { speciality: s_name } });
+    const { s_name,cityname } = useParams();
+    const[searchname,setSearchname ]= useState(s_name);
+    const { loading, error, data } = useQuery(specializationQuery, { variables: { speciality: searchname } });
     const [page, setPage] = useState(1);
     const [doctorsList, setDoctorsList] = useState([]);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -26,10 +27,15 @@ const Searchpage = () => {
     const fetchChunkData = async (limit, offset) => {
         try {
           const data = await doctorsBySpec({
-            variables: { name: s_name, limit: 6, offset: 0 },
+            variables: { name: searchname, limit: 6, offset: 0 },
           });
          
           setItems(data?.data?.doctorBySpecialitiesPage);
+          // if(data?.data?.doctorBySpecialitiesPage?.length<6)
+          //   {
+          //     setHasMore(false);
+          //   }
+          // console.log("data value in length is", data)
         } catch (error) {
           console.log("Error", error);
         }
@@ -40,15 +46,20 @@ const Searchpage = () => {
       }, []);
     
       const fetchMoreData = async() => {
+        if(data?.data?.doctorBySpecialitiesPage?.length<6)
+          {
+            setHasMore(false);
+          }
         setOffset(offset+6)
-        if(offset>17)
-            {
-          setHasMore(false);
-        }
+
+        // if(offset>17)
+        //     {
+        //   setHasMore(false);
+        // }
     
         try {
           const data = await doctorsBySpec({
-            variables: { name: s_name, limit: 6, offset: offset },
+            variables: { name: searchname, limit: 6, offset: offset },
           });
          
           setItems([...items,...data?.data?.doctorBySpeciality]);
@@ -112,7 +123,7 @@ const Searchpage = () => {
           dataLength={items.length}
           next={fetchMoreData}
           hasMore={hasMore}
-        //   loader={<h4 className="text-center mb-10">Loading...</h4>}
+          // loader={<h4 className="text-center mb-10">Loading...</h4>}
           endMessage={<div className="text-center mb-10">Yay! You have seen it all</div>}
         >
                 <Doctorlist doctors={doctorsList} />

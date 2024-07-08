@@ -23,7 +23,6 @@ const startServer = async () => {
     });
   
     await pool.getConnection();
-
     const server = new ApolloServer({
       typeDefs,
       resolvers,
