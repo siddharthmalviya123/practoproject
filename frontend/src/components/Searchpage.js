@@ -8,9 +8,9 @@ import { specializationQuery ,searchBySpecialityPage} from '../graphql/doctorsQu
 import InfiniteScroll from 'react-infinite-scroll-component';
 
 const Searchpage = () => {
-    const { s_name,cityname } = useParams();
+    const { s_name } = useParams();
     const[searchname,setSearchname ]= useState(s_name);
-    const { loading, error, data } = useQuery(specializationQuery, { variables: { speciality: searchname } });
+    const { loading, error, data } = useQuery(specializationQuery, { variables: { speciality: s_name } });
     const [page, setPage] = useState(1);
     const [doctorsList, setDoctorsList] = useState([]);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -123,7 +123,7 @@ const Searchpage = () => {
           dataLength={items.length}
           next={fetchMoreData}
           hasMore={hasMore}
-          // loader={<h4 className="text-center mb-10">Loading...</h4>}
+          loader={<h4 className="text-center mb-10">Loading...</h4>}
           endMessage={<div className="text-center mb-10">Yay! You have seen it all</div>}
         >
                 <Doctorlist doctors={doctorsList} />

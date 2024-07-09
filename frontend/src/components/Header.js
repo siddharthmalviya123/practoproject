@@ -14,6 +14,7 @@ const Header = () => {
             dispatch(setUser(null));
             localStorage.removeItem('token')
             localStorage.removeItem('user')
+            alert("press ok to logged out successfully")
             Navigate("/");
 
         } catch (error) {

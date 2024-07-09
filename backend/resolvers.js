@@ -219,6 +219,21 @@ const resolvers = {
             // console.log("Rows", rows);
             return rows;
         },
+        addreview :async (_, { d_id ,p_id,review,rating}, { pool }) => {
+            const [rows] = await pool.query(
+                `INSERT INTO doctor_review (d_id, review, rating, p_id)
+VALUES (?, ?, ?, ?);`,
+                [d_id,review,rating,p_id]
+            );
+            console.log("Rows adding review is ", rows);
+            if(rows.affectedRows)
+                {
+                    return true;
+                }
+                else{
+                    return false;
+                }
+        },
         cancelappointments: async (_, { appointmentid }, { pool }) => {
             try {
                 const [result] = await pool.query(
@@ -475,8 +490,23 @@ specializations: async (parent, _, { pool }) => {
         const query = 'SELECT * FROM doctor_patient_map WHERE d_id = ?';
         const [rows] = await pool.query(query, [parent.d_id]);
         return rows;
-    }
     },
+    reviews: async (parent,_, { pool }) => {
+        try {
+            // Query to select all reviews for a specific doctor (d_id)
+            const query = 'SELECT dr_id ,p_id, review, rating FROM doctor_review WHERE d_id = ?';
+            
+            // Execute the query with the d_id parameter
+            const [rows] = await pool.query(query, [parent.d_id]);
+            console.log("the review is",rows);
+            // Return the rows fetched from the database
+            return rows;
+        } catch (error) {
+            console.error('Error fetching reviews:', error);
+            throw error; // Throw the error to be caught by the caller
+        }
+    }
+},    
 Clinic: {
     doctors: async (parent, _, { pool }) => {
         const query = 'SELECT * FROM doctors WHERE d_id IN (SELECT d_id FROM doctor_clinic_map WHERE c_id = ?)';

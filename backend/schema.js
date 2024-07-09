@@ -37,6 +37,8 @@ type Mutation {
     doctorByNamePage(name:String!, limit:Int!, offset:Int!):[Doctor]
     doctorBySpecialitiesPage(name:String!, limit:Int!, offset:Int!):[Doctor]
     cancelappointments(appointmentid:Int!) : Boolean!
+    addreview(d_id:Int!, p_id:Int!, review :String , rating:Int!):Boolean!
+
 
 }
 
@@ -77,10 +79,15 @@ type Doctor {
   d_exp: Int
   d_img: String
   clinicmap: [Clinic]  
+  reviews :[reviewoutput]
   specializations: [Specialization]
   appointments: [DoctorPatientMap]
 }
-
+  type reviewoutput{
+    dr_id:Int
+    review : String
+    rating: Int
+  }
  
 input DoctorInput {
   d_name: String

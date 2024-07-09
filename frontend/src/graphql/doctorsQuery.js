@@ -134,3 +134,30 @@ export const searchBySpecialityPage= gql`mutation DoctorBySpecialitiesPage($name
   cancelappointments(appointmentid: $appointmentid)
 }
 `;
+
+export const DOCTOR_QUERY_PROFILE = gql`
+query Doctor($doctorId: Int!) {
+  doctor(id: $doctorId) {
+    d_id
+    d_name
+    d_mob
+    d_exp
+    d_fee 
+    d_img
+    clinicmap {
+      c_id
+      c_name
+      c_address
+    }
+    specializations {
+      s_name
+    }
+  }
+}
+`;
+
+export const REVIEW_ADD = gql`
+mutation Addreview($dId: Int!, $pId: Int!, $rating: Int!, $review: String) {
+  addreview(d_id: $dId, p_id: $pId, rating: $rating, review: $review)
+}`
+
