@@ -35,7 +35,7 @@ const startServer = async () => {
 
 
     app.listen({ port: 4000 }, () =>
-      console.log(`Server ready at ${process.env.PORT}${server.graphqlPath}`)
+      console.log(`Server ready at http://localhost:4000${server.graphqlPath}`)
     );
   } catch (err) {
     console.error('Unable to connect to the database:', err.message);
