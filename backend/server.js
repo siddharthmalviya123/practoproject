@@ -26,7 +26,6 @@ const startServer = async () => {
     const server = new ApolloServer({
       typeDefs,
       resolvers,
-      persistedQueries: false,
       context: { pool } 
     });
 
