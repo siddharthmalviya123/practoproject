@@ -10,7 +10,7 @@ import store from './redux/store';
 
 
 const client = new ApolloClient({
-  uri: 'http://localhost:4000/graphql', // Replace with your GraphQL server endpoint
+  uri: 'https://practoproject.onrender.com/', // Replace with your GraphQL server endpoint
   cache: new InMemoryCache(),
 });
 
